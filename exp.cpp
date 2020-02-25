@@ -15,7 +15,7 @@ struct sSpaceObject
 
 int main()
 {
-    // asteroid
+    // =======ASTEROID SETUP=======
     std::vector<sSpaceObject> vecAsteroids{};
     vecAsteroids.push_back({50.f, 50.f, 100.f, 100.f, 0.0f, 1.0f});
     float fRadius = 100.0f;
@@ -25,9 +25,8 @@ int main()
     asteroidModelShape.setOutlineThickness(1.0f);
     asteroidModelShape.setOrigin(fRadius/2, fRadius/2);
 
-    // ship
+    // =======SHIP SETUP=======
     sSpaceObject ship{float(nScreenWidth)/2.0f, float(nScreenHeight)/2.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-    //sf::CircleShape shipModelShape(20.0f, 3);
     sf::ConvexShape shipModelShape;
     float ship_box_h = 24.0f, ship_box_w = 15.0f;
     shipModelShape.setPointCount(3);
@@ -36,15 +35,18 @@ int main()
     shipModelShape.setPoint(2, sf::Vector2f(ship_box_w/2.0f, ship_box_h/3.0f));
     shipModelShape.setFillColor(sf::Color(255, 255, 255));
     float shipAngVel = 100.0f;
-    float shipAcc = 50.0f;
+    float shipAcc = 150.0f;
 
-    // debug
-    sf::RectangleShape origin(sf::Vector2f(2.0f, 2.0f));
-    origin.setFillColor(sf::Color(255, 0, 0));
+    // ======BULLET SETUP======
+    std::vector<sSpaceObject> vecBullets{};
+    sf::RectangleShape bulletModelShape(sf::Vector2f(2.0f, 2.0f));
+    float bulletVec = 250.f;
+    bulletModelShape.setFillColor(sf::Color::Cyan);
 
     sf::RenderWindow window(sf::VideoMode(nScreenWidth, nScreenHeight), "");
     window.setKeyRepeatEnabled(false);
 
+    sf::Clock triggerClock;
     sf::Clock clock;
     // run the program as long as the window is open
     while (window.isOpen())
@@ -62,10 +64,6 @@ int main()
         }
 
         // steer the ship
-        // if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
-        //     shipModelShape.rotate(shipAngVel * fElapsedTime);
-        // if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))   
-        //     shipModelShape.rotate(-shipAngVel * fElapsedTime);
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
             ship.angle += shipAngVel * fElapsedTime;
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))   
@@ -78,8 +76,34 @@ int main()
             ship.vy += shipAcc * -cosf(ship.angle * PI / 180.f) * fElapsedTime;
         }
 
+        // trigger bullet
+        sf::Time triggerDuration = triggerClock.getElapsedTime();
+        float triggerDelay = triggerDuration.asSeconds();
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space) && triggerDelay > 0.25f)
+        {
+            triggerClock.restart();
+            sSpaceObject bullet{
+                ship.x,
+                ship.y, 
+                bulletVec * sinf(ship.angle * PI / 180.f),
+                bulletVec * -cosf(ship.angle * PI / 180.f), 
+                ship.angle, 
+                1.0f
+            };
+            vecBullets.push_back(bullet);
+        }
+
         // clear the window
         window.clear(sf::Color::Black);
+
+        // draw and update bullets
+        for(auto &b : vecBullets)
+        {
+            b.x += b.vx * fElapsedTime;
+            b.y += b.vy * fElapsedTime;
+            bulletModelShape.setPosition(b.x, b.y);
+            window.draw(bulletModelShape);
+        }
 
         // draw and update player ship
         ship.x += ship.vx * fElapsedTime;
