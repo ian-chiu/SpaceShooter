@@ -1,12 +1,14 @@
 #include<SFML/Graphics.hpp>
 #include<SFML/Window.hpp>
 #include <vector>
+#include <algorithm>
 constexpr auto PI = 3.14159265f;
 
 int nScreenWidth = 800;
 int nScreenHeight = 600;
 
 void wrapCoordinate(float &x, float &y);
+bool isPointInsideCircle(float cx, float cy, float r, float x, float y);
 
 struct sSpaceObject
 {
@@ -18,12 +20,12 @@ int main()
     // =======ASTEROID SETUP=======
     std::vector<sSpaceObject> vecAsteroids{};
     vecAsteroids.push_back({50.f, 50.f, 100.f, 100.f, 0.0f, 1.0f});
-    float fRadius = 100.0f;
-    sf::CircleShape asteroidModelShape(fRadius);
+    float fAsteroidRad = 100.0f;
+    sf::CircleShape asteroidModelShape(fAsteroidRad);
     asteroidModelShape.setFillColor(sf::Color(0, 0, 0));
     asteroidModelShape.setOutlineColor(sf::Color(250, 150, 100));
     asteroidModelShape.setOutlineThickness(1.0f);
-    asteroidModelShape.setOrigin(fRadius/2, fRadius/2);
+    asteroidModelShape.setOrigin(fAsteroidRad/2, fAsteroidRad/2);
 
     // =======SHIP SETUP=======
     sSpaceObject ship{float(nScreenWidth)/2.0f, float(nScreenHeight)/2.0f, 0.0f, 0.0f, 0.0f, 0.0f};
@@ -43,6 +45,7 @@ int main()
     float bulletVec = 250.f;
     bulletModelShape.setFillColor(sf::Color::Cyan);
 
+    // ======CREATE WINDOW======
     sf::RenderWindow window(sf::VideoMode(nScreenWidth, nScreenHeight), "");
     window.setKeyRepeatEnabled(false);
 
@@ -103,6 +106,15 @@ int main()
             b.y += b.vy * fElapsedTime;
             bulletModelShape.setPosition(b.x, b.y);
             window.draw(bulletModelShape);
+            
+            // Check for asteroid collision
+            for(auto &a : vecAsteroids)
+            {
+                if(isPointInsideCircle(a.x, a.y, a.size * fAsteroidRad, b.x, b.y))
+                {
+                    b.x -= 1000.0f;
+                }
+            }
         }
 
         // draw and update player ship
@@ -127,6 +139,17 @@ int main()
             window.draw(asteroidModelShape);
         }
 
+        // remove bullet if it is off the screen
+        if(!vecBullets.empty())
+        {
+            auto iter = std::remove_if(
+                vecBullets.begin(),
+                vecBullets.end(),
+                [&](sSpaceObject o) { return (o.x < 1.0f || o.y < 1.0f || o.x >= nScreenWidth-1 || o.y >= nScreenHeight-1);}
+            );
+            if(iter != vecBullets.end())
+                vecBullets.erase(iter);
+        }
         
         window.display();
     }
@@ -142,4 +165,10 @@ void wrapCoordinate(float &x, float &y)
     if(x >= nScreenWidth)   x -= nScreenWidth;
     if(y <= 0.0f)           y += nScreenHeight;
     if(y >= nScreenHeight)  y -= nScreenHeight;
+}
+
+bool isPointInsideCircle(float cx, float cy, float r, float x, float y)
+{
+    float dis = sqrt((x - cx)*(x - cx) + (y - cy)*(y - cy));
+    return (dis < r) ? true : false;
 }
