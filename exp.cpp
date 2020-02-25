@@ -41,7 +41,7 @@ int main()
 
     // ======BULLET SETUP======
     std::vector<sSpaceObject> vecBullets{};
-    sf::RectangleShape bulletModelShape(sf::Vector2f(2.0f, 2.0f));
+    sf::RectangleShape bulletModelShape(sf::Vector2f(3.0f, 3.0f));
     float bulletVec = 250.f;
     bulletModelShape.setFillColor(sf::Color::Cyan);
 
@@ -85,9 +85,15 @@ int main()
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space) && triggerDelay > 0.25f)
         {
             triggerClock.restart();
+            float bulletTriggerPos_x = 
+                ship.x + shipModelShape.getPoint(0).x * cosf(ship.angle * PI / 180) - 
+                shipModelShape.getPoint(0).y * sinf(ship.angle * PI / 180);
+            float bulletTriggerPos_y =  
+                ship.y + shipModelShape.getPoint(0).y * cosf(ship.angle * PI / 180) + 
+                shipModelShape.getPoint(0).x * sinf(ship.angle * PI / 180);
             sSpaceObject bullet{
-                ship.x,
-                ship.y, 
+                bulletTriggerPos_x,
+                bulletTriggerPos_y, 
                 bulletVec * sinf(ship.angle * PI / 180.f),
                 bulletVec * -cosf(ship.angle * PI / 180.f), 
                 ship.angle, 
@@ -98,6 +104,15 @@ int main()
 
         // clear the window
         window.clear(sf::Color::Black);
+
+        // draw and update player ship
+        ship.x += ship.vx * fElapsedTime;
+        ship.y += ship.vy * fElapsedTime;
+        wrapCoordinate(ship.x, ship.y);
+        shipModelShape.setPosition(ship.x, ship.y);
+        shipModelShape.setRotation(ship.angle);
+        window.draw(shipModelShape);
+        printf("%f\n", ship.angle);
 
         // draw and update bullets
         for(auto &b : vecBullets)
@@ -116,15 +131,6 @@ int main()
                 }
             }
         }
-
-        // draw and update player ship
-        ship.x += ship.vx * fElapsedTime;
-        ship.y += ship.vy * fElapsedTime;
-        wrapCoordinate(ship.x, ship.y);
-        shipModelShape.setPosition(ship.x, ship.y);
-        shipModelShape.setRotation(ship.angle);
-        window.draw(shipModelShape);
-        printf("%f\n", ship.angle);
 
         // draw and update asteroids
         for(auto &a : vecAsteroids)
