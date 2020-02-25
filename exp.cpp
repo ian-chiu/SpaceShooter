@@ -4,11 +4,14 @@
 #include <algorithm>
 constexpr auto PI = 3.14159265f;
 
-int nScreenWidth = 800;
-int nScreenHeight = 600;
+int nScreenWidth = 1000;
+int nScreenHeight = 800;
 
 void wrapCoordinate(float &x, float &y);
 bool isPointInsideCircle(float cx, float cy, float r, float x, float y);
+// Triangular functions that take degree argument
+inline float sind(float randian) { return sinf(randian * PI / 180); }
+inline float cosd(float randian) { return cosf(randian * PI / 180); }
 
 struct sSpaceObject
 {
@@ -17,12 +20,13 @@ struct sSpaceObject
 
 int main()
 {
+    srand(time(0));
     // =======ASTEROID SETUP=======
     std::vector<sSpaceObject> vecAsteroids{};
-    vecAsteroids.push_back({50.f, 50.f, 100.f, 100.f, 0.0f, 1.0f});
-    float fAsteroidRad = 100.0f;
+    vecAsteroids.push_back({50.f, 50.f, 100.f, 100.f, 0.0f, 2.0f});
+    float fAsteroidRad = 50.0f;
     sf::CircleShape asteroidModelShape(fAsteroidRad);
-    asteroidModelShape.setFillColor(sf::Color(0, 0, 0));
+    asteroidModelShape.setFillColor(sf::Color::Transparent);
     asteroidModelShape.setOutlineColor(sf::Color(250, 150, 100));
     asteroidModelShape.setOutlineThickness(1.0f);
     asteroidModelShape.setOrigin(fAsteroidRad/2, fAsteroidRad/2);
@@ -36,14 +40,14 @@ int main()
     shipModelShape.setPoint(1, sf::Vector2f(-ship_box_w/2.0f, ship_box_h/3.0f));
     shipModelShape.setPoint(2, sf::Vector2f(ship_box_w/2.0f, ship_box_h/3.0f));
     shipModelShape.setFillColor(sf::Color(255, 255, 255));
-    float shipAngVel = 100.0f;
-    float shipAcc = 150.0f;
+    float shipAngVel = 200.0f;  // Degree per second
+    float shipAcc = 150.0f;     // px per second
 
     // ======BULLET SETUP======
     std::vector<sSpaceObject> vecBullets{};
     sf::RectangleShape bulletModelShape(sf::Vector2f(3.0f, 3.0f));
-    float bulletVec = 250.f;
-    bulletModelShape.setFillColor(sf::Color::Cyan);
+    float bulletVec = 500.f;    // px per sec
+    bulletModelShape.setFillColor(sf::Color::White);
 
     // ======CREATE WINDOW======
     sf::RenderWindow window(sf::VideoMode(nScreenWidth, nScreenHeight), "");
@@ -86,16 +90,20 @@ int main()
         {
             triggerClock.restart();
             float bulletTriggerPos_x = 
-                ship.x + shipModelShape.getPoint(0).x * cosf(ship.angle * PI / 180) - 
+                ship.x + 
+                shipModelShape.getPoint(0).x * cosf(ship.angle * PI / 180) - 
                 shipModelShape.getPoint(0).y * sinf(ship.angle * PI / 180);
+
             float bulletTriggerPos_y =  
-                ship.y + shipModelShape.getPoint(0).y * cosf(ship.angle * PI / 180) + 
+                ship.y + 
+                shipModelShape.getPoint(0).y * cosf(ship.angle * PI / 180) + 
                 shipModelShape.getPoint(0).x * sinf(ship.angle * PI / 180);
+
             sSpaceObject bullet{
                 bulletTriggerPos_x,
                 bulletTriggerPos_y, 
-                bulletVec * sinf(ship.angle * PI / 180.f),
-                bulletVec * -cosf(ship.angle * PI / 180.f), 
+                ship.vx + bulletVec * sinf(ship.angle * PI / 180.f), // add initial vel
+                ship.vy + bulletVec * -cosf(ship.angle * PI / 180.f), 
                 ship.angle, 
                 1.0f
             };
@@ -112,9 +120,9 @@ int main()
         shipModelShape.setPosition(ship.x, ship.y);
         shipModelShape.setRotation(ship.angle);
         window.draw(shipModelShape);
-        printf("%f\n", ship.angle);
 
-        // draw and update bullets
+        // draw and update bullets and check bullet collision
+        std::vector<sSpaceObject> vecNewAsteroids{};
         for(auto &b : vecBullets)
         {
             b.x += b.vx * fElapsedTime;
@@ -128,22 +136,25 @@ int main()
                 if(isPointInsideCircle(a.x, a.y, a.size * fAsteroidRad, b.x, b.y))
                 {
                     b.x -= 1000.0f;
+
+                    // split the asteroid if size > 4 else delete it
+                    if(a.size > 0.5f)
+                    {
+                        float angle1 = float(rand()) / float(RAND_MAX) * 360.f; //Degree not radian
+                        float angle2 = float(rand()) / float(RAND_MAX) * 360.f;
+                        float splitVec = 50.f;
+                        printf("hit hit hit!\n");
+                        vecNewAsteroids.push_back({a.x, a.y, splitVec * sind(angle1), splitVec * -cosd(angle1), angle1, a.size / 2.0f});
+                        vecNewAsteroids.push_back({a.x, a.y, splitVec * sind(angle2), splitVec * -cosd(angle2), angle2, a.size / 2.0f});
+                    }
+                    a.x = -1000.0f; // remove off the screen so the func underneath can delete it
                 }
             }
         }
 
-        // draw and update asteroids
-        for(auto &a : vecAsteroids)
-        {
-            a.x += a.vx * fElapsedTime;
-            a.y += a.vy * fElapsedTime;
-            wrapCoordinate(a.x, a.y);
-            
-            asteroidModelShape.setPosition(a.x, a.y);
-            asteroidModelShape.scale(a.size, a.size);
-            asteroidModelShape.rotate(a.angle);
-            window.draw(asteroidModelShape);
-        }
+        // append new asteroid in original storage
+        for(auto a : vecNewAsteroids)
+            vecAsteroids.push_back(a);
 
         // remove bullet if it is off the screen
         if(!vecBullets.empty())
@@ -157,6 +168,31 @@ int main()
                 vecBullets.erase(iter);
         }
         
+        // remove asteroid if it is off the screen
+        if(!vecAsteroids.empty())
+        {
+            auto iter = std::remove_if(
+                vecAsteroids.begin(),
+                vecAsteroids.end(),
+                [&](sSpaceObject o) { return (o.x < 0.0f);}
+            );
+            if(iter != vecAsteroids.end())
+                vecAsteroids.erase(iter);
+        }
+
+        // draw and update asteroids
+        for(auto &a : vecAsteroids)
+        {
+            a.x += a.vx * fElapsedTime;
+            a.y += a.vy * fElapsedTime;
+            wrapCoordinate(a.x, a.y);
+            
+            asteroidModelShape.setPosition(a.x, a.y);
+            asteroidModelShape.setScale(a.size, a.size);
+            //asteroidModelShape.rotate(a.angle);
+            window.draw(asteroidModelShape);
+        }
+
         window.display();
     }
 
