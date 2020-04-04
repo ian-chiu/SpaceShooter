@@ -2,6 +2,7 @@
 #include <SFML/Window.hpp>
 #include <vector>
 #include <algorithm>
+#include <string>
 constexpr auto PI = 3.14159265f;
 
 int nScreenWidth = 800;
@@ -21,6 +22,14 @@ struct sSpaceObject
 int main()
 {
     srand(time(0));
+    // =======FONT AND TEXT========
+    sf::Font font;
+    font.loadFromFile("consola.ttf");
+    sf::Text score_text;
+    score_text.setString("SCORE: ");
+    score_text.setCharacterSize(16);
+    score_text.setFillColor(sf::Color::White);
+
     // =======ASTEROID SETUP=======
     std::vector<sSpaceObject> vecAsteroids{};
     vecAsteroids.push_back({50.f, 50.f, 100.f, 100.f, 0.0f, 2.0f});
@@ -34,7 +43,7 @@ int main()
     // =======SHIP SETUP=======
     sSpaceObject ship{float(nScreenWidth) / 2.0f, float(nScreenHeight) / 2.0f, 0.0f, 0.0f, 0.0f, 0.0f};
     sf::ConvexShape shipModelShape;
-    float ship_box_h = 48.0f, ship_box_w = 30.0f;
+    float ship_box_h = 40.0f, ship_box_w = 22.0f;
     shipModelShape.setPointCount(3);
     shipModelShape.setPoint(0, sf::Vector2f(0.0, -ship_box_h * 2.0f / 3.0f));
     shipModelShape.setPoint(1, sf::Vector2f(-ship_box_w / 2.0f, ship_box_h / 3.0f));
@@ -56,6 +65,7 @@ int main()
     sf::Clock triggerClock;
     sf::Clock clock;
     bool bDead = false;
+    int nScore = 0;
     auto ResetGame = [&]() {
         vecAsteroids.clear();
         vecBullets.clear();
@@ -149,6 +159,7 @@ int main()
                 if (isPointInsideCircle(a.x, a.y, a.size * fAsteroidRad, b.x, b.y))
                 {
                     b.x -= 1000.0f;
+                    nScore += 100;
 
                     // split the asteroid if size > 4 else delete it
                     if (a.size > 0.5f)
@@ -212,14 +223,21 @@ int main()
         for (auto a : vecAsteroids)
             if (isPointInsideCircle(a.x, a.y, fAsteroidRad * a.size, ship.x, ship.y))
                 bDead = true;
-
+        
+        if(vecAsteroids.empty())
+        {
+            nScore += 1000;
+            ResetGame();
+        }
+        //score_text.setString(score_text.getString() + std::to_string(nScore));
+        window.draw(score_text);
         window.display();
     }
 
     return 0;
 }
 
-//----------------FUCTION DECLARATIONS------------------
+//----------------FUCTION DEFINITIONS------------------
 void wrapCoordinate(float &x, float &y)
 {
     if (x <= 0.0f)

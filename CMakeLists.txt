@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(SFML_exp)
+project(SpaceShooter)
 
 
 set(SDL2_INCLUDE_DIR Dependencies/SFML/include)
 set(SDL2_LIB_DIR Dependencies/SFML/lib)
-set(SOURCE_FILES exp.cpp)
+set(SOURCE_FILES Source.cpp)
 
 include_directories(${SDL2_INCLUDE_DIR})
 link_directories(${SDL2_LIB_DIR})
